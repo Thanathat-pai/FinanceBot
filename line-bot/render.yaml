@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: line-finance-bot
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app.main:app -w 1 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 60
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: line-finance-db
+          property: connectionString
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.12.0
+
+databases:
+  - name: line-finance-db
+    plan: free
+    region: singapore
+    ipAllowList: []

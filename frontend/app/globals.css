@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --max-mobile: 430px;
+}
+
+body {
+  max-width: var(--max-mobile);
+  margin: 0 auto;
+  background: #f8fafc;
+}

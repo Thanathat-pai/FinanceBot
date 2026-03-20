@@ -1,0 +1,4 @@
+Run Alembic migrations:
+  alembic init alembic
+  alembic revision --autogenerate -m "initial"
+  alembic upgrade head

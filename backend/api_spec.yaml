@@ -1,0 +1,557 @@
+openapi: "3.1.0"
+info:
+  title: Personal Finance REST API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - message
+        - code
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum: [income, expense]
+        icon:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+        is_default:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    TransactionRequest:
+      type: object
+      required:
+        - type
+        - amount
+        - category_id
+        - date
+      properties:
+        type:
+          type: string
+          enum: [income, expense]
+        amount:
+          type: number
+          format: decimal
+        category_id:
+          type: string
+          format: uuid
+        note:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date
+    Transaction:
+      allOf:
+        - $ref: "#/components/schemas/TransactionRequest"
+        - type: object
+          required:
+            - id
+            - created_at
+            - updated_at
+          properties:
+            id:
+              type: string
+              format: uuid
+            category:
+              $ref: "#/components/schemas/Category"
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+    TransactionListResponse:
+      type: object
+      required:
+        - data
+        - total
+        - page
+        - page_size
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+    CategoryItem:
+      type: object
+      required:
+        - category_id
+        - category_name
+        - amount
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        category_name:
+          type: string
+        amount:
+          type: number
+          format: decimal
+    SummaryResponse:
+      type: object
+      required:
+        - total_income
+        - total_expense
+        - net
+        - top_categories
+      properties:
+        total_income:
+          type: number
+          format: decimal
+        total_expense:
+          type: number
+          format: decimal
+        net:
+          type: number
+          format: decimal
+        top_categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryItem"
+    BudgetRequest:
+      type: object
+      required:
+        - category_id
+        - month
+        - limit_amount
+      properties:
+        category_id:
+          type: string
+          format: uuid
+        month:
+          type: string
+          format: date
+        limit_amount:
+          type: number
+          format: decimal
+    BudgetItem:
+      allOf:
+        - $ref: "#/components/schemas/BudgetRequest"
+        - type: object
+          required:
+            - id
+            - spent_amount
+          properties:
+            id:
+              type: string
+              format: uuid
+            category:
+              $ref: "#/components/schemas/Category"
+            spent_amount:
+              type: number
+              format: decimal
+    BudgetListResponse:
+      type: object
+      required:
+        - data
+        - month
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BudgetItem"
+        month:
+          type: string
+          format: date
+    QuickParseRequest:
+      type: object
+      required:
+        - text
+      properties:
+        text:
+          type: string
+    QuickParseResponse:
+      type: object
+      required:
+        - parsed
+      properties:
+        parsed:
+          type: boolean
+        type:
+          type: string
+          enum: [income, expense]
+          nullable: true
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        amount:
+          type: number
+          format: decimal
+          nullable: true
+        raw:
+          type: string
+          nullable: true
+paths:
+  /transactions:
+    post:
+      summary: Create transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionRequest"
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      summary: List transactions
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense]
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Transactions list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /transactions/{id}:
+    get:
+      summary: Get transaction by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Transaction found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransactionRequest"
+      responses:
+        "200":
+          description: Transaction updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Soft delete transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Transaction deleted
+        "404":
+          description: Transaction not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /transactions/quick:
+    post:
+      summary: Parse and create transaction from natural language
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuickParseRequest"
+      responses:
+        "201":
+          description: Transaction parsed and created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuickParseResponse"
+        "400":
+          description: Parse failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuickParseResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /summary/daily:
+    get:
+      summary: Get daily summary
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Daily summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /summary/monthly:
+    get:
+      summary: Get monthly summary
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+      responses:
+        "200":
+          description: Monthly summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /summary/yearly:
+    get:
+      summary: Get yearly summary
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Yearly summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /categories:
+    get:
+      summary: List all categories
+      responses:
+        "200":
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Category"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /budgets:
+    post:
+      summary: Create budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetRequest"
+      responses:
+        "201":
+          description: Budget created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetItem"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /budgets/current:
+    get:
+      summary: Get current month budgets
+      responses:
+        "200":
+          description: Current month budgets with spent amounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
