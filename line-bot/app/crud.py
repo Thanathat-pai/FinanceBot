@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
+from typing import Optional
 from sqlalchemy.orm import Session
 from app.models import Transaction
 
@@ -23,12 +24,24 @@ def _month_utc_range():
     return start_th.astimezone(timezone.utc), end_th.astimezone(timezone.utc)
 
 
-def save_transaction(db: Session, user_id: str, type_: str, amount: float, description: str) -> Transaction:
+def save_transaction(
+    db: Session,
+    user_id: str,
+    type_: str,
+    amount: float,
+    description: str,
+    item_name: Optional[str] = None,
+    quantity: Optional[float] = None,
+    unit_price: Optional[float] = None,
+) -> Transaction:
     tx = Transaction(
         user_id=user_id,
         type=type_,
         amount=Decimal(str(amount)),
         description=description,
+        item_name=item_name,
+        quantity=Decimal(str(quantity)) if quantity is not None else None,
+        unit_price=Decimal(str(unit_price)) if unit_price is not None else None,
         created_at=datetime.now(timezone.utc),
     )
     db.add(tx)

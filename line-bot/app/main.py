@@ -12,6 +12,7 @@ from linebot.v3.messaging import (
 from linebot.v3.webhook import WebhookParser
 from linebot.v3.webhooks import MessageEvent, TextMessageContent
 
+from sqlalchemy import text
 from app.database import Base, SessionLocal, engine
 from app import line_handler
 
@@ -19,6 +20,17 @@ from app import line_handler
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    # เพิ่ม column ใหม่ถ้ายังไม่มี (migration แบบ safe)
+    with engine.connect() as conn:
+        for col, dtype in [
+            ("item_name", "VARCHAR(255)"),
+            ("quantity", "NUMERIC(10,2)"),
+            ("unit_price", "NUMERIC(10,2)"),
+        ]:
+            conn.execute(text(
+                f"ALTER TABLE transactions ADD COLUMN IF NOT EXISTS {col} {dtype}"
+            ))
+        conn.commit()
     yield
 
 

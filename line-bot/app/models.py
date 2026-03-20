@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from decimal import Decimal
+from typing import Optional
 from sqlalchemy import String, Numeric, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
@@ -13,8 +14,11 @@ class Transaction(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(100), nullable=False)
-    type: Mapped[str] = mapped_column(String(10), nullable=False)  # income / expense
+    type: Mapped[str] = mapped_column(String(10), nullable=False)        # income / expense
     amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    item_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)   # ชื่อสินค้า
+    quantity: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)  # จำนวน
+    unit_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)  # ราคาต่อหน่วย
     description: Mapped[str] = mapped_column(String(500), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
